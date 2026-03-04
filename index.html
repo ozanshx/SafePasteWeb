@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafePaste - Pure Client-side Data Masking</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div class="header-content">
+                <h1>SafePaste</h1>
+                <p>Secure, pure client-side data masking. Your data never leaves your browser.</p>
+            </div>
+            <button id="openConfigBtn" class="btn btn-icon" title="Settings">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </button>
+        </header>
+
+        <main class="grid-container">
+            <!-- Source Panel -->
+            <div class="panel glass">
+                <div class="panel-header">
+                    <h2>1. Input Text</h2>
+                    <span class="badge">Source</span>
+                </div>
+                <div class="panel-body">
+                    <textarea id="sourceInput" placeholder="Paste your sensitive logs or text here..."></textarea>
+                </div>
+                <div class="panel-footer">
+                    <button id="maskBtn" class="btn btn-primary">Lock & Mask</button>
+                    <button id="clearSourceBtn" class="btn btn-outline">Clear</button>
+                </div>
+            </div>
+
+            <!-- Output Panel -->
+            <div class="panel glass">
+                <div class="panel-header">
+                    <h2>2. Masked Output</h2>
+                    <span class="badge badge-success">Safe</span>
+                </div>
+                <div class="panel-body">
+                    <textarea id="maskedOutput" readonly placeholder="Masked text will appear here..."></textarea>
+                </div>
+                <div class="panel-footer">
+                    <button id="copyMaskedBtn" class="btn btn-secondary">Copy to Clipboard</button>
+                </div>
+            </div>
+
+            <!-- Mapping Table Panel -->
+            <div class="panel glass">
+                <div class="panel-header">
+                    <h2>3. Dictionary Mapping</h2>
+                    <span class="badge badge-info">Reference</span>
+                </div>
+                <div class="panel-body table-container">
+                    <table id="mappingTable">
+                        <thead>
+                            <tr>
+                                <th>Token</th>
+                                <th>Original Value</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mappingTableBody">
+                            <tr>
+                                <td colspan="2" class="empty-state">No mappings yet. Mask some text to generate dictionary.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="panel-footer">
+                    <button id="exportMapBtn" class="btn btn-outline" disabled>Export Map</button>
+                    <button id="importMapBtn" class="btn btn-outline">Import Map</button>
+                    <input type="file" id="importMapFile" style="display: none;" accept=".json">
+                </div>
+            </div>
+
+            <!-- Restore Panel -->
+            <div class="panel glass">
+                <div class="panel-header">
+                    <h2>4. Restore Original</h2>
+                    <span class="badge badge-warning">Unmask</span>
+                </div>
+                <div class="panel-body">
+                    <textarea id="unmaskInput" placeholder="Paste masked text here to restore..."></textarea>
+                </div>
+                <div class="panel-footer">
+                    <button id="unmaskBtn" class="btn btn-primary">Restore & Unmask</button>
+                    <button id="copyUnmaskedBtn" class="btn btn-secondary">Copy Result</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Config Modal -->
+    <div id="configModal" class="modal">
+        <div class="modal-content glass">
+            <div class="modal-header">
+                <h2>Configuration Rules</h2>
+                <button id="closeConfigBtn" class="btn-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="config-section">
+                    <h3>Built-in Masks</h3>
+                    <label class="toggle-container">
+                        <input type="checkbox" id="configMaskIp" checked>
+                        <span class="slider"></span>
+                        <span class="toggle-label">Mask IP Addresses (IPv4/IPv6)</span>
+                    </label>
+                    <label class="toggle-container">
+                        <input type="checkbox" id="configMaskHostname" checked>
+                        <span class="slider"></span>
+                        <span class="toggle-label">Mask Hostnames/Domains</span>
+                    </label>
+                </div>
+                <div class="config-section">
+                    <h3>Custom Keywords (Comma Separated)</h3>
+                    <textarea id="configCustomKeywords" placeholder="e.g. secret_token, P@ssw0rd123, username"></textarea>
+                    <p class="help-text">These exact words will be replaced with [KEYWORD_X] tags.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveConfigBtn" class="btn btn-primary">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">Action successful</div>
+
+    <script src="script.js"></script>
+</body>
+</html>

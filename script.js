@@ -28,6 +28,8 @@ const saveModalBtn = document.getElementById('saveConfigBtn');
 const configMaskIp = document.getElementById('configMaskIp');
 const configMaskHostname = document.getElementById('configMaskHostname');
 const configCustomKeywords = document.getElementById('configCustomKeywords');
+const regexRulesContainer = document.getElementById('regexRulesContainer');
+const addRegexRuleBtn = document.getElementById('addRegexRuleBtn');
 
 // Toast
 const toast = document.getElementById('toast');
@@ -38,7 +40,8 @@ let reverseDictionary = new Map(); // masked -> original
 let counters = {
     ip: 1,
     host: 1,
-    key: 1
+    key: 1,
+    regex: 1
 };
 
 const regexPatterns = {
@@ -52,18 +55,28 @@ const regexPatterns = {
 let currentConfig = {
     maskIp: true,
     maskHostname: true,
-    customKeywords: []
+    customKeywords: [],
+    customRegexes: []
 };
 
 // --- Initialization ---
 function init() {
-    // Load config from local storage if exists
+    // Load config from local storage    // Load saved settings
     const savedConfig = localStorage.getItem('safepaste_config');
     if (savedConfig) {
         currentConfig = JSON.parse(savedConfig);
         configMaskIp.checked = currentConfig.maskIp;
         configMaskHostname.checked = currentConfig.maskHostname;
         configCustomKeywords.value = currentConfig.customKeywords.join(', ');
+        if (currentConfig.customRegexes && currentConfig.customRegexes.length > 0) {
+            currentConfig.customRegexes.forEach(r => {
+                const label = typeof r === 'object' ? r.label : 'REGEX';
+                const pattern = typeof r === 'object' ? r.pattern : String(r);
+                addRegexRuleRow(label, pattern);
+            });
+        } else {
+            addRegexRuleRow('', ''); // default empty row
+        }
     }
 
     // Event Listeners
@@ -86,6 +99,7 @@ function init() {
     openModalBtn.addEventListener('click', () => modal.classList.add('active'));
     closeModalBtn.addEventListener('click', () => modal.classList.remove('active'));
     saveModalBtn.addEventListener('click', saveConfig);
+    addRegexRuleBtn.addEventListener('click', () => addRegexRuleRow('', ''));
 
     // Close modal on outside click
     modal.addEventListener('click', (e) => {
@@ -95,6 +109,37 @@ function init() {
     });
 }
 
+function addRegexRuleRow(labelValue = '', patternValue = '') {
+    const row = document.createElement('div');
+    row.className = 'regex-rule-row';
+
+    const lblInput = document.createElement('input');
+    lblInput.type = 'text';
+    lblInput.className = 'regex-label-input';
+    lblInput.placeholder = 'Label (e.g. SICIL)';
+    lblInput.value = labelValue;
+
+    const patInput = document.createElement('input');
+    patInput.type = 'text';
+    patInput.className = 'regex-pattern-input';
+    patInput.placeholder = 'Regex (e.g. ^FB[0-9]+$)';
+    patInput.value = patternValue;
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'btn btn-icon btn-danger';
+    delBtn.innerHTML = '&times;';
+    delBtn.title = 'Remove Rule';
+    delBtn.addEventListener('click', () => {
+        row.remove();
+    });
+
+    row.appendChild(lblInput);
+    row.appendChild(patInput);
+    row.appendChild(delBtn);
+    regexRulesContainer.appendChild(row);
+}
+
 // --- Masking Core Logic ---
 function handleMasking() {
     let text = sourceInput.value;
@@ -102,6 +147,9 @@ function handleMasking() {
         showToast('Please enter text to mask.', true);
         return;
     }
+
+    // Normalize CRLF to LF to prevent \r breaking $ anchors in regex
+    text = text.replace(/\r/g, '');
 
     // Process IP Masking
     if (currentConfig.maskIp) {
@@ -131,21 +179,54 @@ function handleMasking() {
         });
     }
 
+    // Process Custom Regexes
+    if (currentConfig.customRegexes && currentConfig.customRegexes.length > 0) {
+        currentConfig.customRegexes.forEach(rule => {
+            // handle both old string format and new object format gracefully
+            const pattern = typeof rule === 'object' ? rule.pattern : rule;
+            const label = typeof rule === 'object' ? rule.label : 'REGEX';
+
+            if (!pattern) return;
+            try {
+                // We use global multi-line matching (gm). This ensures ^ and $ anchors work per-line
+                // if the user pastes multiple lines of logs into the input.
+                const rulesRegex = new RegExp(pattern, 'gm');
+                text = text.replace(rulesRegex, match => maskValue(match, 'regex', label));
+            } catch (e) {
+                console.warn("Invalid regex provided by user:", pattern);
+            }
+        });
+    }
+
     maskedOutput.value = text;
     renderMappingTable();
     showToast('Text successfully masked!');
 }
 
-function maskValue(original, type) {
+function maskValue(original, type, customLabel = null) {
     if (dictionary.has(original)) {
         return dictionary.get(original);
     }
 
     let prefix = 'IP_';
-    if (type === 'host') prefix = 'HOST_';
-    if (type === 'key') prefix = 'KEY_';
+    let counterKey = type;
 
-    const masked = `[${prefix}${counters[type]++}]`;
+    if (type === 'host') {
+        prefix = 'HOST_';
+        counterKey = 'host';
+    } else if (type === 'key') {
+        prefix = 'KEY_';
+        counterKey = 'key';
+    } else if (type === 'regex') {
+        prefix = customLabel ? `${customLabel}_` : 'REGEX_';
+        counterKey = customLabel ? `regex_${customLabel}` : 'regex';
+    }
+
+    if (!counters[counterKey]) {
+        counters[counterKey] = 1;
+    }
+
+    const masked = `[${prefix}${counters[counterKey]++}]`;
     dictionary.set(original, masked);
     reverseDictionary.set(masked, original);
 
@@ -162,6 +243,8 @@ function handleUnmasking() {
         showToast('Please enter masked text to restore.', true);
         return;
     }
+
+    text = text.replace(/\r/g, '');
 
     // Replace based on reverse dictionary
     if (reverseDictionary.size === 0) {
@@ -243,7 +326,7 @@ function importMapping(e) {
             });
 
             // Reset counters safely
-            counters = { ip: 1000, host: 1000, key: 1000 }; // Ensure no collisions for subsequent ops
+            counters = { ip: 1000, host: 1000, key: 1000, regex: 1000 }; // Ensure no collisions for subsequent ops
 
             renderMappingTable();
             exportMapBtn.disabled = dictionary.size === 0;
@@ -265,8 +348,26 @@ function saveConfig() {
     currentConfig.maskHostname = configMaskHostname.checked;
 
     // Parse custom keywords
-    const keywordsRaw = configCustomKeywords.value;
+    const keywordsRaw = configCustomKeywords.value.replace(/\r/g, '');
     currentConfig.customKeywords = keywordsRaw.split(',').map(k => k.trim()).filter(k => k.length > 0);
+
+    // Parse custom regexes from table UI
+    currentConfig.customRegexes = [];
+    const rows = regexRulesContainer.querySelectorAll('.regex-rule-row');
+    rows.forEach(row => {
+        const lblInput = row.querySelector('.regex-label-input');
+        const patInput = row.querySelector('.regex-pattern-input');
+
+        const lbl = lblInput.value.replace(/\r/g, '').trim().toUpperCase().replace(/[^A-Z0-9_]/g, '');
+        const pat = patInput.value.replace(/\r/g, '').trim();
+
+        if (pat) {
+            currentConfig.customRegexes.push({
+                label: lbl || 'REGEX',
+                pattern: pat
+            });
+        }
+    });
 
     // Save to local storage
     localStorage.setItem('safepaste_config', JSON.stringify(currentConfig));

@@ -26,7 +26,7 @@ body {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     background-color: var(--bg-color);
     background-image: radial-gradient(circle at top right, rgba(88, 166, 255, 0.1), transparent 400px),
-                      radial-gradient(circle at bottom left, rgba(46, 160, 67, 0.05), transparent 400px);
+        radial-gradient(circle at bottom left, rgba(46, 160, 67, 0.05), transparent 400px);
     color: var(--text-primary);
     min-height: 100vh;
     display: flex;
@@ -123,7 +123,8 @@ header {
 }
 
 /* Form Elements */
-textarea, input[type="text"] {
+textarea,
+input[type="text"] {
     width: 100%;
     height: 100%;
     background: var(--input-bg);
@@ -137,7 +138,8 @@ textarea, input[type="text"] {
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-textarea:focus, input[type="text"]:focus {
+textarea:focus,
+input[type="text"]:focus {
     outline: none;
     border-color: var(--input-focus);
     box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2);
@@ -159,9 +161,20 @@ textarea::placeholder {
     color: var(--text-secondary);
 }
 
-.badge-success { background: rgba(46, 160, 67, 0.2); color: var(--success-color); }
-.badge-warning { background: rgba(227, 179, 65, 0.2); color: var(--warning-color); }
-.badge-info { background: rgba(56, 139, 253, 0.2); color: var(--info-color); }
+.badge-success {
+    background: rgba(46, 160, 67, 0.2);
+    color: var(--success-color);
+}
+
+.badge-warning {
+    background: rgba(227, 179, 65, 0.2);
+    color: var(--warning-color);
+}
+
+.badge-info {
+    background: rgba(56, 139, 253, 0.2);
+    color: var(--info-color);
+}
 
 /* Buttons */
 .btn {
@@ -258,7 +271,8 @@ table {
     text-align: left;
 }
 
-th, td {
+th,
+td {
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--panel-border);
 }
@@ -397,12 +411,12 @@ td.empty-state {
     transition: 0.3s;
 }
 
-input:checked + .slider {
+input:checked+.slider {
     background-color: var(--success-color);
     border-color: var(--success-color);
 }
 
-input:checked + .slider:before {
+input:checked+.slider:before {
     transform: translateX(20px);
     background-color: #fff;
 }
@@ -449,4 +463,40 @@ input:checked + .slider:before {
     .grid-container {
         grid-template-columns: 1fr;
     }
+}
+
+/* Regex Rules Table Layout */
+.regex-rule-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    align-items: center;
+}
+
+.regex-rule-row input {
+    height: 40px;
+    padding: 0.5rem 1rem;
+}
+
+.regex-label-input {
+    flex: 1;
+}
+
+.regex-pattern-input {
+    flex: 2;
+}
+
+.btn-sm {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+}
+
+.btn-danger {
+    background: transparent;
+    color: var(--danger-color);
+    border: 1px solid var(--danger-color);
+}
+
+.btn-danger:hover {
+    background: rgba(248, 81, 73, 0.1);
 }

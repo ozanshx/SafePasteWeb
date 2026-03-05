@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
+
 <body>
     <div class="app-container">
         <header>
@@ -15,7 +17,13 @@
                 <p>Secure, pure client-side data masking. Your data never leaves your browser.</p>
             </div>
             <button id="openConfigBtn" class="btn btn-icon" title="Settings">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path
+                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                    </path>
+                </svg>
             </button>
         </header>
 
@@ -65,7 +73,8 @@
                         </thead>
                         <tbody id="mappingTableBody">
                             <tr>
-                                <td colspan="2" class="empty-state">No mappings yet. Mask some text to generate dictionary.</td>
+                                <td colspan="2" class="empty-state">No mappings yet. Mask some text to generate
+                                    dictionary.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -117,8 +126,17 @@
                 </div>
                 <div class="config-section">
                     <h3>Custom Keywords (Comma Separated)</h3>
-                    <textarea id="configCustomKeywords" placeholder="e.g. secret_token, P@ssw0rd123, username"></textarea>
-                    <p class="help-text">These exact words will be replaced with [KEYWORD_X] tags.</p>
+                    <textarea id="configCustomKeywords"
+                        placeholder="e.g. secret_token, P@ssw0rd123, username"></textarea>
+                    <p class="help-text">These exact words will be replaced with [KEY_x] tags.</p>
+                </div>
+                <div class="config-section">
+                    <h3>Custom Regex Rules</h3>
+                    <div id="regexRulesContainer"></div>
+                    <button type="button" id="addRegexRuleBtn" class="btn btn-outline btn-sm"
+                        style="margin-top: 10px; width: 100%;">+ Add Row</button>
+                    <p class="help-text">Define labels and their corresponding regex patterns. Matches will be replaced
+                        with [LABEL_x] tags (e.g. [SICIL_1]).</p>
                 </div>
             </div>
             <div class="modal-footer">
@@ -130,6 +148,7 @@
     <!-- Toast Notification -->
     <div id="toast" class="toast">Action successful</div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=4"></script>
 </body>
+
 </html>

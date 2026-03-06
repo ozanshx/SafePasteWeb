@@ -142,87 +142,92 @@ function addRegexRuleRow(labelValue = '', patternValue = '') {
 
 // --- Masking Core Logic ---
 function handleMasking() {
-    let text = sourceInput.value;
-    if (!text) {
-        showToast('Please enter text to mask.', true);
-        return;
+    try {
+        let text = sourceInput.value;
+        if (!text) {
+            showToast('Please enter text to mask.', true);
+            return;
+        }
+
+        // Normalize CRLF to LF to prevent \r breaking $ anchors in regex
+        text = text.replace(/\r/g, '');
+
+        // Process IP Masking
+        if (currentConfig.maskIp) {
+            text = text.replace(regexPatterns.ipv4, match => maskValue(match, 'ip'));
+            text = text.replace(regexPatterns.ipv6, match => maskValue(match, 'ip'));
+        }
+
+        // Process Hostname Masking
+        if (currentConfig.maskHostname) {
+            text = text.replace(regexPatterns.hostname, (fullMatch, domain) => {
+                // Avoid Double Masking if IP matched as a host
+                if (regexPatterns.ipv4.test(domain)) return fullMatch;
+
+                // The regex matches ` prefix + domain`. We only want to mask `domain`.
+                return fullMatch.replace(domain, maskValue(domain, 'host'));
+            });
+        }
+
+        // Process Custom Keywords (Internal Substring Allowed)
+        if (currentConfig.customKeywords && currentConfig.customKeywords.length > 0) {
+            currentConfig.customKeywords.forEach(kw => {
+                if (!kw) return;
+                // Escape regex chars in keyword to match exact string
+                const safeKw = kw.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+                // Removed \b anchors to allow substring matching inside words as requested
+                const kwRegex = new RegExp(safeKw, 'gi');
+                text = text.replace(kwRegex, match => maskValue(match, 'key'));
+            });
+        }
+
+        // Process Custom Regexes
+        if (currentConfig.customRegexes && currentConfig.customRegexes.length > 0) {
+            currentConfig.customRegexes.forEach(rule => {
+                // handle both old string format and new object format gracefully
+                const pattern = typeof rule === 'object' ? rule.pattern : rule;
+                const label = typeof rule === 'object' ? rule.label : 'REGEX';
+
+                if (!pattern || pattern.trim() === '') return;
+
+                let regexPattern = pattern.trim();
+                let regexFlags = 'gm'; // default global multiline
+
+                // 1. Check for PCRE inline case-insensitive flag (?i)
+                if (regexPattern.startsWith('(?i)')) {
+                    regexPattern = regexPattern.substring(4);
+                    if (!regexFlags.includes('i')) regexFlags += 'i';
+                }
+
+                // 2. Check for explicit JS literal format like /pattern/flags
+                const literalMatch = regexPattern.match(/^\/(.+)\/([a-z]*)$/);
+                if (literalMatch) {
+                    regexPattern = literalMatch[1];
+                    // merge user flags with 'g' and 'm', keeping unique chars
+                    const userFlags = literalMatch[2];
+                    regexFlags = Array.from(new Set((userFlags + 'gm').split(''))).join('');
+                }
+
+                try {
+                    // Compile the RegExp with extracted flags
+                    const rulesRegex = new RegExp(regexPattern, regexFlags);
+                    text = text.replace(rulesRegex, match => {
+                        if (!match) return match; // prevent empty match loop
+                        return maskValue(match, 'regex', label);
+                    });
+                } catch (e) {
+                    console.warn("Invalid regex provided by user:", pattern, e);
+                }
+            });
+        }
+
+        maskedOutput.value = text;
+        renderMappingTable();
+        showToast('Text successfully masked!');
+
+    } catch (e) {
+        alert("CRITICAL ERROR IN HANDLEMASKING:\n" + e.message + "\n" + e.stack);
     }
-
-    // Normalize CRLF to LF to prevent \r breaking $ anchors in regex
-    text = text.replace(/\r/g, '');
-
-    // Process IP Masking
-    if (currentConfig.maskIp) {
-        text = text.replace(regexPatterns.ipv4, match => maskValue(match, 'ip'));
-        text = text.replace(regexPatterns.ipv6, match => maskValue(match, 'ip'));
-    }
-
-    // Process Hostname Masking
-    if (currentConfig.maskHostname) {
-        text = text.replace(regexPatterns.hostname, (fullMatch, domain) => {
-            // Avoid Double Masking if IP matched as a host
-            if (regexPatterns.ipv4.test(domain)) return fullMatch;
-
-            // The regex matches ` prefix + domain`. We only want to mask `domain`.
-            return fullMatch.replace(domain, maskValue(domain, 'host'));
-        });
-    }
-
-    // Process Custom Keywords (Internal Substring Allowed)
-    if (currentConfig.customKeywords && currentConfig.customKeywords.length > 0) {
-        currentConfig.customKeywords.forEach(kw => {
-            if (!kw) return;
-            // Escape regex chars in keyword to match exact string
-            const safeKw = kw.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
-            // Removed \b anchors to allow substring matching inside words as requested
-            const kwRegex = new RegExp(safeKw, 'gi');
-            text = text.replace(kwRegex, match => maskValue(match, 'key'));
-        });
-    }
-
-    // Process Custom Regexes
-    if (currentConfig.customRegexes && currentConfig.customRegexes.length > 0) {
-        currentConfig.customRegexes.forEach(rule => {
-            // handle both old string format and new object format gracefully
-            const pattern = typeof rule === 'object' ? rule.pattern : rule;
-            const label = typeof rule === 'object' ? rule.label : 'REGEX';
-
-            if (!pattern || pattern.trim() === '') return;
-
-            let regexPattern = pattern.trim();
-            let regexFlags = 'gm'; // default global multiline
-
-            // 1. Check for PCRE inline case-insensitive flag (?i)
-            if (regexPattern.startsWith('(?i)')) {
-                regexPattern = regexPattern.substring(4);
-                if (!regexFlags.includes('i')) regexFlags += 'i';
-            }
-
-            // 2. Check for explicit JS literal format like /pattern/flags
-            const literalMatch = regexPattern.match(/^\/(.+)\/([a-z]*)$/);
-            if (literalMatch) {
-                regexPattern = literalMatch[1];
-                // merge user flags with 'g' and 'm', keeping unique chars
-                const userFlags = literalMatch[2];
-                regexFlags = Array.from(new Set((userFlags + 'gm').split(''))).join('');
-            }
-
-            try {
-                // Compile the RegExp with extracted flags
-                const rulesRegex = new RegExp(regexPattern, regexFlags);
-                text = text.replace(rulesRegex, match => {
-                    if (!match) return match; // prevent empty match loop
-                    return maskValue(match, 'regex', label);
-                });
-            } catch (e) {
-                console.warn("Invalid regex provided by user:", pattern, e);
-            }
-        });
-    }
-
-    maskedOutput.value = text;
-    renderMappingTable();
-    showToast('Text successfully masked!');
 }
 
 function maskValue(original, type, customLabel = null) {

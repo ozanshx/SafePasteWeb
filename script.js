@@ -190,63 +190,78 @@ function handleMasking() {
         });
     }
 
-    // Process Custom Regexes (auto-sorted by specificity: more detailed rules first)
+    // Process Custom Regexes (longest-match-first strategy)
+    // All rules scan independently, then the longest match at each position wins.
     if (currentConfig.customRegexes && currentConfig.customRegexes.length > 0) {
-        // Score each rule by specificity so complex patterns run before simple ones
-        const scoredRules = currentConfig.customRegexes.map(rule => {
-            const pattern = typeof rule === 'object' ? rule.pattern : rule;
+        // Step 1: Collect ALL matches from ALL rules
+        const allMatches = [];
+
+        currentConfig.customRegexes.forEach(rule => {
+            let pattern = typeof rule === 'object' ? rule.pattern : rule;
             const label = typeof rule === 'object' ? rule.label : 'REGEX';
-            if (!pattern || pattern.trim() === '') return null;
+            if (!pattern || pattern.trim() === '') return;
+            pattern = pattern.trim();
 
-            let score = 0;
-            const p = pattern.trim();
-            // Anchors (^ $) = more specific
-            if (p.includes('^')) score += 10;
-            if (p.includes('$')) score += 10;
-            // Lookahead/lookbehind = much more specific
-            if (p.includes('(?!') || p.includes('(?=') || p.includes('(?<!') || p.includes('(?<=')) score += 20;
-            // Exact quantifiers {n} = more specific than greedy +/*
-            if (/\{\d+\}/.test(p)) score += 5;
-            if (/\{\d+,\d+\}/.test(p)) score += 5;
-            // Longer pattern string = generally more specific
-            score += p.length;
+            let regexPattern = pattern;
+            let regexFlags = 'gm';
 
-            return { pattern, label, score };
-        }).filter(Boolean);
-
-        // Sort descending: highest specificity first
-        scoredRules.sort((a, b) => b.score - a.score);
-
-        scoredRules.forEach(({ pattern, label }) => {
-            let regexPattern = pattern.trim();
-            let regexFlags = 'gm'; // default global multiline
-
-            // 1. Check for PCRE inline case-insensitive flag (?i)
+            // Parse (?i) PCRE flag
             if (regexPattern.startsWith('(?i)')) {
                 regexPattern = regexPattern.substring(4);
                 if (!regexFlags.includes('i')) regexFlags += 'i';
             }
-
-            // 2. Check for explicit JS literal format like /pattern/flags
+            // Parse /pattern/flags literal
             const literalMatch = regexPattern.match(/^\/(.+)\/([a-z]*)$/);
             if (literalMatch) {
                 regexPattern = literalMatch[1];
-                // merge user flags with 'g' and 'm', keeping unique chars
                 const userFlags = literalMatch[2];
                 regexFlags = Array.from(new Set((userFlags + 'gm').split(''))).join('');
             }
 
             try {
-                // Compile the RegExp with extracted flags
-                const rulesRegex = new RegExp(regexPattern, regexFlags);
-                text = text.replace(rulesRegex, match => {
-                    if (!match) return match; // prevent empty match loop
-                    return maskValue(match, 'regex', label);
-                });
+                const rx = new RegExp(regexPattern, regexFlags);
+                let m;
+                while ((m = rx.exec(text)) !== null) {
+                    if (!m[0]) break; // prevent infinite loop on empty match
+                    allMatches.push({
+                        start: m.index,
+                        end: m.index + m[0].length,
+                        len: m[0].length,
+                        value: m[0],
+                        label: label
+                    });
+                }
             } catch (e) {
-                console.warn("Invalid regex provided by user:", pattern, e);
+                console.warn("Invalid regex:", pattern, e);
             }
         });
+
+        // Step 2: Sort by length descending (longest first), then by position ascending
+        allMatches.sort((a, b) => b.len - a.len || a.start - b.start);
+
+        // Step 3: Greedily pick non-overlapping matches (longest wins)
+        const picked = [];
+        const used = new Set(); // track character positions already claimed
+
+        for (const match of allMatches) {
+            let overlaps = false;
+            for (let i = match.start; i < match.end; i++) {
+                if (used.has(i)) { overlaps = true; break; }
+            }
+            if (!overlaps) {
+                picked.push(match);
+                for (let i = match.start; i < match.end; i++) {
+                    used.add(i);
+                }
+            }
+        }
+
+        // Step 4: Apply replacements from end to start (so positions stay valid)
+        picked.sort((a, b) => b.start - a.start);
+        for (const match of picked) {
+            const masked = maskValue(match.value, 'regex', match.label);
+            text = text.substring(0, match.start) + masked + text.substring(match.end);
+        }
     }
 
     maskedOutput.value = text;

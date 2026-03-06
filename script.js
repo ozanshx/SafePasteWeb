@@ -27,6 +27,7 @@ const closeModalBtn = document.getElementById('closeConfigBtn');
 const saveModalBtn = document.getElementById('saveConfigBtn');
 const configMaskIp = document.getElementById('configMaskIp');
 const configMaskHostname = document.getElementById('configMaskHostname');
+const configMaskDatabase = document.getElementById('configMaskDatabase');
 const configCustomKeywords = document.getElementById('configCustomKeywords');
 const regexRulesContainer = document.getElementById('regexRulesContainer');
 const addRegexRuleBtn = document.getElementById('addRegexRuleBtn');
@@ -41,6 +42,7 @@ let counters = {
     ip: 1,
     host: 1,
     key: 1,
+    db: 1,
     regex: 1
 };
 
@@ -55,6 +57,7 @@ const regexPatterns = {
 let currentConfig = {
     maskIp: true,
     maskHostname: true,
+    maskDatabase: false,
     customKeywords: [],
     customRegexes: []
 };
@@ -67,6 +70,9 @@ function init() {
         currentConfig = JSON.parse(savedConfig);
         configMaskIp.checked = currentConfig.maskIp;
         configMaskHostname.checked = currentConfig.maskHostname;
+        if (currentConfig.maskDatabase !== undefined) {
+            configMaskDatabase.checked = currentConfig.maskDatabase;
+        }
         configCustomKeywords.value = currentConfig.customKeywords.join(', ');
         if (currentConfig.customRegexes && currentConfig.customRegexes.length > 0) {
             currentConfig.customRegexes.forEach(r => {
@@ -178,6 +184,14 @@ function handleMasking() {
         });
     }
 
+    // Process Database Masking (e.g., schema..tableName)
+    // Masks both sides of the double dot: [DB_1]..[DB_2]
+    if (currentConfig.maskDatabase) {
+        text = text.replace(/\b([a-zA-Z0-9_]+)\.\.([a-zA-Z0-9_]+)\b/g, (fullMatch, schema, table) => {
+            return maskValue(schema, 'db') + '..' + maskValue(table, 'db');
+        });
+    }
+
     // Process Custom Keywords (Internal Substring Allowed)
     if (currentConfig.customKeywords && currentConfig.customKeywords.length > 0) {
         currentConfig.customKeywords.forEach(kw => {
@@ -283,6 +297,9 @@ function maskValue(original, type, customLabel = null) {
     } else if (type === 'key') {
         prefix = 'KEY_';
         counterKey = 'key';
+    } else if (type === 'db') {
+        prefix = 'SCHEMA_';
+        counterKey = 'db';
     } else if (type === 'regex') {
         prefix = customLabel ? `${customLabel}_` : 'REGEX_';
         counterKey = customLabel ? `regex_${customLabel}` : 'regex';
@@ -392,7 +409,7 @@ function importMapping(e) {
             });
 
             // Reset counters safely
-            counters = { ip: 1000, host: 1000, key: 1000, regex: 1000 }; // Ensure no collisions for subsequent ops
+            counters = { ip: 1000, host: 1000, key: 1000, db: 1000, regex: 1000 }; // Ensure no collisions for subsequent ops
 
             renderMappingTable();
             exportMapBtn.disabled = dictionary.size === 0;
@@ -412,6 +429,7 @@ function importMapping(e) {
 function saveConfig() {
     currentConfig.maskIp = configMaskIp.checked;
     currentConfig.maskHostname = configMaskHostname.checked;
+    currentConfig.maskDatabase = configMaskDatabase.checked;
 
     // Parse custom keywords
     const keywordsRaw = configCustomKeywords.value.replace(/\r/g, '');

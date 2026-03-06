@@ -500,3 +500,77 @@ input:checked+.slider:before {
 .btn-danger:hover {
     background: rgba(248, 81, 73, 0.1);
 }
+
+/* Footer */
+.app-footer {
+    margin-top: 2rem;
+    padding: 1.25rem 0;
+    border-top: 1px solid var(--panel-border);
+}
+
+.footer-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.footer-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.footer-logo {
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+}
+
+.footer-edition {
+    font-weight: 400;
+    color: var(--primary-color);
+    font-size: 0.75rem;
+    margin-left: -0.15rem;
+}
+
+.footer-version {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    background: rgba(110, 118, 129, 0.1);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+}
+
+.footer-separator {
+    color: rgba(110, 118, 129, 0.4);
+}
+
+.footer-link {
+    color: var(--text-secondary);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    transition: color 0.2s;
+}
+
+.footer-link:hover {
+    color: var(--primary-color);
+}
+
+.footer-author a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.footer-author a:hover {
+    color: var(--primary-color);
+}

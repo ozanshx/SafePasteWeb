@@ -186,14 +186,35 @@ function handleMasking() {
             const pattern = typeof rule === 'object' ? rule.pattern : rule;
             const label = typeof rule === 'object' ? rule.label : 'REGEX';
 
-            if (!pattern) return;
+            if (!pattern || pattern.trim() === '') return;
+
+            let regexPattern = pattern.trim();
+            let regexFlags = 'gm'; // default global multiline
+
+            // 1. Check for PCRE inline case-insensitive flag (?i)
+            if (regexPattern.startsWith('(?i)')) {
+                regexPattern = regexPattern.substring(4);
+                if (!regexFlags.includes('i')) regexFlags += 'i';
+            }
+
+            // 2. Check for explicit JS literal format like /pattern/flags
+            const literalMatch = regexPattern.match(/^\/(.+)\/([a-z]*)$/);
+            if (literalMatch) {
+                regexPattern = literalMatch[1];
+                // merge user flags with 'g' and 'm', keeping unique chars
+                const userFlags = literalMatch[2];
+                regexFlags = Array.from(new Set((userFlags + 'gm').split(''))).join('');
+            }
+
             try {
-                // We use global multi-line matching (gm). This ensures ^ and $ anchors work per-line
-                // if the user pastes multiple lines of logs into the input.
-                const rulesRegex = new RegExp(pattern, 'gm');
-                text = text.replace(rulesRegex, match => maskValue(match, 'regex', label));
+                // Compile the RegExp with extracted flags
+                const rulesRegex = new RegExp(regexPattern, regexFlags);
+                text = text.replace(rulesRegex, match => {
+                    if (!match) return match; // prevent empty match loop
+                    return maskValue(match, 'regex', label);
+                });
             } catch (e) {
-                console.warn("Invalid regex provided by user:", pattern);
+                console.warn("Invalid regex provided by user:", pattern, e);
             }
         });
     }

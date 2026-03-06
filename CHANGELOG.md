@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [1.2.0] - 2026-03-06
 
 ### Added
+- **Database Masking Mode:** Added a dedicated toggle to mask `schema..table` patterns automatically, identifying both components and replacing them with sequential `[SCHEMA_X]` tags (e.g., `[SCHEMA_1]..[SCHEMA_2]`).
 - **Built-in `user@hostname` Masking:** Automatically detects SSH-style patterns like `root@servername` and masks only the hostname part after `@` as `[HOST_X]`, preserving the username.
 - **Longest-Match-First Regex Engine:** Custom regex rules now use a smart matching engine that runs ALL rules independently, collects every possible match, and picks the longest match at each position. Short rules can no longer steal matches from longer ones, regardless of rule order.
 - **PCRE `(?i)` Flag Support:** Custom regex patterns can use inline case-insensitive flags like `(?i)fb[a-z0-9]+` — the flag is automatically extracted and applied.

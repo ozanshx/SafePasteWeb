@@ -42,7 +42,8 @@ let counters = {
     ip: 1,
     host: 1,
     key: 1,
-    db: 1,
+    schema: 1,
+    table: 1,
     regex: 1
 };
 
@@ -163,6 +164,15 @@ function handleMasking() {
         text = text.replace(regexPatterns.ipv6, match => maskValue(match, 'ip'));
     }
 
+    // Process Database Masking (e.g., schema..tableName or schema.tableName)
+    // Masks independently: [SCHEMA_1].[TABLE_1]
+    if (currentConfig.maskDatabase) {
+        // Match SQL identifiers separated by . or .. but ensure they aren't part of a longer dot-chain
+        text = text.replace(/(?<!\.)\b([a-zA-Z_][a-zA-Z0-9_]*)(\.\.?)([a-zA-Z_][a-zA-Z0-9_]*)\b(?!\.)/g, (fullMatch, schema, delimiter, table) => {
+            return maskValue(schema, 'schema') + delimiter + maskValue(table, 'table');
+        });
+    }
+
     // Process Hostname Masking (FQDN with dots like api.example.com)
     if (currentConfig.maskHostname) {
         text = text.replace(regexPatterns.hostname, (fullMatch, domain) => {
@@ -181,14 +191,6 @@ function handleMasking() {
             // Skip if this host already got masked by the FQDN pass above (contains [HOST_ or [IP_)
             if (host.startsWith('[')) return fullMatch;
             return user + '@' + maskValue(host, 'host');
-        });
-    }
-
-    // Process Database Masking (e.g., schema..tableName)
-    // Masks both sides of the double dot: [DB_1]..[DB_2]
-    if (currentConfig.maskDatabase) {
-        text = text.replace(/\b([a-zA-Z0-9_]+)\.\.([a-zA-Z0-9_]+)\b/g, (fullMatch, schema, table) => {
-            return maskValue(schema, 'db') + '..' + maskValue(table, 'db');
         });
     }
 
@@ -297,9 +299,12 @@ function maskValue(original, type, customLabel = null) {
     } else if (type === 'key') {
         prefix = 'KEY_';
         counterKey = 'key';
-    } else if (type === 'db') {
+    } else if (type === 'schema') {
         prefix = 'SCHEMA_';
-        counterKey = 'db';
+        counterKey = 'schema';
+    } else if (type === 'table') {
+        prefix = 'TABLE_';
+        counterKey = 'table';
     } else if (type === 'regex') {
         prefix = customLabel ? `${customLabel}_` : 'REGEX_';
         counterKey = customLabel ? `regex_${customLabel}` : 'regex';
@@ -409,7 +414,7 @@ function importMapping(e) {
             });
 
             // Reset counters safely
-            counters = { ip: 1000, host: 1000, key: 1000, db: 1000, regex: 1000 }; // Ensure no collisions for subsequent ops
+            counters = { ip: 1000, host: 1000, key: 1000, schema: 1000, table: 1000, regex: 1000 }; // Ensure no collisions for subsequent ops
 
             renderMappingTable();
             exportMapBtn.disabled = dictionary.size === 0;

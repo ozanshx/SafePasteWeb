@@ -41,16 +41,14 @@ let counters = {
     ip: 1,
     host: 1,
     key: 1,
-    regex: 1,
-    credential: 1
+    regex: 1
 };
 
 const regexPatterns = {
     ipv4: /\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/g,
     // Attempting a simple IPv6 matching pattern
     ipv6: /\b(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}\b|\b(?:[A-F0-9]{1,4}:){1,7}:|\b::(?:[A-F0-9]{1,4}:){0,7}\b/gi,
-    hostname: /(?:^|\s|\b)((?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,24})\b/g,
-    userAtHost: /\b[a-zA-Z0-9_.+-]+@[a-zA-Z0-9_.-]+\b/g
+    hostname: /(?:^|\s|\b)((?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,24})\b/g
 };
 
 // Configuration
@@ -159,11 +157,6 @@ function handleMasking() {
         text = text.replace(regexPatterns.ipv6, match => maskValue(match, 'ip'));
     }
 
-    // Process User@Host or Email Masking
-    if (currentConfig.maskHostname) {
-        text = text.replace(regexPatterns.userAtHost, match => maskValue(match, 'credential'));
-    }
-
     // Process Hostname Masking
     if (currentConfig.maskHostname) {
         text = text.replace(regexPatterns.hostname, (fullMatch, domain) => {
@@ -175,13 +168,14 @@ function handleMasking() {
         });
     }
 
-    // Process Custom Keywords
+    // Process Custom Keywords (Internal Substring Allowed)
     if (currentConfig.customKeywords && currentConfig.customKeywords.length > 0) {
         currentConfig.customKeywords.forEach(kw => {
             if (!kw) return;
             // Escape regex chars in keyword to match exact string
             const safeKw = kw.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
-            const kwRegex = new RegExp(`\\b${safeKw}\\b`, 'gi');
+            // Removed \b anchors to allow substring matching inside words as requested
+            const kwRegex = new RegExp(safeKw, 'gi');
             text = text.replace(kwRegex, match => maskValue(match, 'key'));
         });
     }
@@ -242,9 +236,6 @@ function maskValue(original, type, customLabel = null) {
     if (type === 'host') {
         prefix = 'HOST_';
         counterKey = 'host';
-    } else if (type === 'credential') {
-        prefix = 'USER_';
-        counterKey = 'credential';
     } else if (type === 'key') {
         prefix = 'KEY_';
         counterKey = 'key';

@@ -157,7 +157,7 @@ function handleMasking() {
         text = text.replace(regexPatterns.ipv6, match => maskValue(match, 'ip'));
     }
 
-    // Process Hostname Masking
+    // Process Hostname Masking (FQDN with dots like api.example.com)
     if (currentConfig.maskHostname) {
         text = text.replace(regexPatterns.hostname, (fullMatch, domain) => {
             // Avoid Double Masking if IP matched as a host
@@ -165,6 +165,16 @@ function handleMasking() {
 
             // The regex matches ` prefix + domain`. We only want to mask `domain`.
             return fullMatch.replace(domain, maskValue(domain, 'host'));
+        });
+    }
+
+    // Process user@barehost masking (SSH-style: root@servername without dots)
+    // Masks only the hostname part after @, keeps the username intact
+    if (currentConfig.maskHostname) {
+        text = text.replace(/\b([a-zA-Z0-9_.+-]+)@([a-zA-Z][a-zA-Z0-9_-]{2,})\b/g, (fullMatch, user, host) => {
+            // Skip if this host already got masked by the FQDN pass above (contains [HOST_ or [IP_)
+            if (host.startsWith('[')) return fullMatch;
+            return user + '@' + maskValue(host, 'host');
         });
     }
 

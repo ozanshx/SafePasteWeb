@@ -190,15 +190,34 @@ function handleMasking() {
         });
     }
 
-    // Process Custom Regexes
+    // Process Custom Regexes (auto-sorted by specificity: more detailed rules first)
     if (currentConfig.customRegexes && currentConfig.customRegexes.length > 0) {
-        currentConfig.customRegexes.forEach(rule => {
-            // handle both old string format and new object format gracefully
+        // Score each rule by specificity so complex patterns run before simple ones
+        const scoredRules = currentConfig.customRegexes.map(rule => {
             const pattern = typeof rule === 'object' ? rule.pattern : rule;
             const label = typeof rule === 'object' ? rule.label : 'REGEX';
+            if (!pattern || pattern.trim() === '') return null;
 
-            if (!pattern || pattern.trim() === '') return;
+            let score = 0;
+            const p = pattern.trim();
+            // Anchors (^ $) = more specific
+            if (p.includes('^')) score += 10;
+            if (p.includes('$')) score += 10;
+            // Lookahead/lookbehind = much more specific
+            if (p.includes('(?!') || p.includes('(?=') || p.includes('(?<!') || p.includes('(?<=')) score += 20;
+            // Exact quantifiers {n} = more specific than greedy +/*
+            if (/\{\d+\}/.test(p)) score += 5;
+            if (/\{\d+,\d+\}/.test(p)) score += 5;
+            // Longer pattern string = generally more specific
+            score += p.length;
 
+            return { pattern, label, score };
+        }).filter(Boolean);
+
+        // Sort descending: highest specificity first
+        scoredRules.sort((a, b) => b.score - a.score);
+
+        scoredRules.forEach(({ pattern, label }) => {
             let regexPattern = pattern.trim();
             let regexFlags = 'gm'; // default global multiline
 
